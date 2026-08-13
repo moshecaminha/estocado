@@ -71,6 +71,15 @@ function parseCSV(txt){
   if(campo||linha.length){ linha.push(campo); linhas.push(linha); }
   return linhas.filter(l=>l.some(c=>String(c).trim()!==''));
 }
+const urlEtiqueta = codigo => (CONFIG.URL_BASE||location.origin).replace(/\/$/,'') + '/?c=' + encodeURIComponent(codigo);
+/* aceita etiqueta nova (endereço) e etiqueta antiga (só o código) */
+function codigoDaLeitura(txt){
+  const t = String(txt||'').trim();
+  const m = t.match(/[?&]c=([^&#\s]+)/i);
+  if(m) return decodeURIComponent(m[1]);
+  if(/^https?:\/\//i.test(t)){ const f = t.split('/').filter(Boolean).pop()||''; return decodeURIComponent(f.split('?')[0]); }
+  return t;
+}
 function gerarQR(destino, texto, tamanho){
   destino.innerHTML='';
   if(typeof QRCode==='undefined'){ destino.innerHTML=`<div class="mono" style="font-size:9px">${esc(texto)}</div>`; return; }
@@ -183,6 +192,16 @@ async function entrarNoSistema(){
   el('nomeEmpresa').textContent = CONFIG.EMPRESA;
   el('quemSou').innerHTML = `${esc(perfil.nome)} <span class="papel">${esc(perfil.papel)}</span>`;
   await recarregar();
+  const pedido = new URLSearchParams(location.search).get('c');
+  if(pedido){
+    history.replaceState(null,'','/');
+    const p = acha(pedido);
+    if(p){ vista='saida'; selecionado=p; pintarAbas(); render();
+      setTimeout(()=>{ const q=el('fQtd'); if(q){ q.focus(); q.select(); } },120);
+      return;
+    }
+    aviso('Etiqueta lida: código '+pedido+' não está cadastrado.','ruim');
+  }
   pintarAbas(); render();
 }
 
@@ -485,7 +504,7 @@ function vEtiquetas(){
         <input class="sel" type="checkbox" data-acao="etq-marca" data-id="${p.id}" ${etqSel.has(p.id)?'checked':''} aria-label="Selecionar ${esc(p.nome)}">
         <div class="in"><div class="txt"><div class="c">${p.codigo}</div><div class="n">${esc(p.nome)}</div>
         <div class="l">${esc(p.local)} · ${p.unidade} · mín. ${num(p.minimo)}</div></div>
-        <div class="qr" data-qr="${p.codigo}" data-tam="76"></div></div></div>`).join('')}
+        <div class="qr" data-qr="${urlEtiqueta(p.codigo)}" data-tam="76"></div></div></div>`).join('')}
     </div></div>`;
 }
 
@@ -673,7 +692,8 @@ async function carregarConvites(){
 /* ===================================================================
    LEITURA DE CÓDIGO
    =================================================================== */
-function abrirProduto(codigo){
+function abrirProduto(entrada){
+  const codigo = codigoDaLeitura(entrada);
   const p = acha(codigo);
   if(!p){ aviso('Código '+codigo+' não encontrado.','ruim'); buscarPorNome(codigo); return; }
   if(vista==='inventario'){ F.iBusca = p.codigo; render(); const c=document.querySelector(`[data-contar]`); if(c) c.focus(); return; }
@@ -924,7 +944,7 @@ function imprimirEtiquetas(){
   imprimir(`<div class="etq-grade">${ps.map(p=>`<div class="etq"><div class="tarja"></div><div class="in">
     <div class="txt"><div class="c">${p.codigo}</div><div class="n">${esc(p.nome)}</div>
     <div class="l">${esc(p.local)} · ${p.unidade} · mín. ${num(p.minimo)}</div></div>
-    <div class="qr" data-qr="${p.codigo}" data-tam="86"></div></div></div>`).join('')}</div>`, true);
+    <div class="qr" data-qr="${urlEtiqueta(p.codigo)}" data-tam="86"></div></div></div>`).join('')}</div>`, true);
 }
 function imprimirRelatorio(){
   const dia = F.rData||hoje();
