@@ -21,30 +21,16 @@
     <div class="tarja"></div>
     <div class="in">
       <h1>Almoxarifado</h1>
-      <p class="sub">Controle de estoque · acesso restrito</p>
-
-      <div class="aba-login">
-        <button id="abaEntrar" aria-selected="true" onclick="trocarAbaLogin('entrar')">Entrar</button>
-        <button id="abaCriar" aria-selected="false" onclick="trocarAbaLogin('criar')">Criar acesso</button>
-      </div>
-
+      <p class="sub" id="subLogin">Controle de estoque · acesso restrito</p>
       <div id="msgLogin"></div>
-
-      <div id="formLogin">
-        <label class="campo" id="campoNome" style="display:none"><span>Nome completo</span>
-          <input id="lgNome" type="text" autocomplete="name" placeholder="Como aparece nos relatórios"></label>
-        <label class="campo"><span>Celular com DDD</span>
-          <input id="lgFone" type="tel" inputmode="numeric" autocomplete="username" placeholder="(11) 98765-4321"></label>
-        <label class="campo"><span>Senha</span>
-          <input id="lgSenha" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></label>
-        <button class="btn gr" id="btnLogin" onclick="enviarLogin()">Entrar</button>
-      </div>
+      <div id="areaLogin"><p class="legenda">Carregando…</p></div>
     </div>
   </div>
 </div>
 
 <!-- ===================== APP ===================== -->
 <div id="app" style="display:none">
+  <div class="fixo">
   <header class="topo">
     <div class="topo-in">
       <div class="marca">
@@ -62,6 +48,7 @@
   </header>
 
   <nav class="abas" aria-label="Seções"><div class="abas-in" id="abas"></div></nav>
+  </div>
 
   <main id="tela"><div class="carregando">Carregando estoque…</div></main>
 </div>

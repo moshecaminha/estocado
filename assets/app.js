@@ -71,15 +71,6 @@ function parseCSV(txt){
   if(campo||linha.length){ linha.push(campo); linhas.push(linha); }
   return linhas.filter(l=>l.some(c=>String(c).trim()!==''));
 }
-const urlEtiqueta = codigo => (CONFIG.URL_BASE||location.origin).replace(/\/$/,'') + '/?c=' + encodeURIComponent(codigo);
-/* aceita etiqueta nova (endereço) e etiqueta antiga (só o código) */
-function codigoDaLeitura(txt){
-  const t = String(txt||'').trim();
-  const m = t.match(/[?&]c=([^&#\s]+)/i);
-  if(m) return decodeURIComponent(m[1]);
-  if(/^https?:\/\//i.test(t)){ const f = t.split('/').filter(Boolean).pop()||''; return decodeURIComponent(f.split('?')[0]); }
-  return t;
-}
 function gerarQR(destino, texto, tamanho){
   destino.innerHTML='';
   if(typeof QRCode==='undefined'){ destino.innerHTML=`<div class="mono" style="font-size:9px">${esc(texto)}</div>`; return; }
@@ -89,88 +80,51 @@ function gerarQR(destino, texto, tamanho){
 /* ===================================================================
    AUTENTICAÇÃO — celular + senha
    =================================================================== */
-const limparUsuario = u => String(u||'').trim().toLowerCase().replace(/[^a-z0-9._-]/g,'');
-const emailInterno = usuario => limparUsuario(usuario) + '@' + CONFIG.DOMINIO_INTERNO;
-function msgLogin(txt, ok){ el('msgLogin').innerHTML = txt ? `<div class="${ok?'ok-login':'erro-login'}">${esc(txt)}</div>` : ''; }
-
-/* A tela de acesso tem três estados:
-   configurar → sistema ainda sem administrador (só acontece uma vez)
-   entrar     → uso normal
-   ativar     → quem recebeu convite do administrador define a própria senha  */
-async function montarLogin(){
-  let precisa = false;
-  try{
-    const { data, error } = await sb.rpc('alm_precisa_configurar');
-    if(error) throw error;
-    precisa = !!data;
-  }catch(e){
-    msgLogin('Não consegui falar com o banco: '+(e.message||e));
-  }
-  abaLogin = precisa ? 'configurar' : 'entrar';
-  pintarLogin();
+function emailInterno(fone){
+  const d = soDigitos(fone);
+  return (d.length>=12 ? d : '55'+d) + '@' + CONFIG.DOMINIO_INTERNO;
 }
-function pintarLogin(){
-  const modo = abaLogin;
-  el('subLogin').textContent = modo==='configurar' ? 'Primeiro acesso · criação do administrador'
-    : modo==='ativar' ? 'Ativação de acesso liberado pelo administrador'
-    : 'Controle de estoque · acesso restrito';
-
-  el('areaLogin').innerHTML = `
-    ${modo==='configurar' ? `<p class="legenda">Ninguém tem acesso ainda. Crie aqui a conta de administrador — depois dela, o cadastro fecha e novos usuários só entram por liberação sua.</p>` : ''}
-    ${modo!=='entrar' ? `<label class="campo"><span>Nome completo</span>
-      <input id="lgNome" type="text" autocomplete="name" placeholder="Como aparece nos relatórios"></label>` : ''}
-    <label class="campo"><span>Usuário</span>
-      <input id="lgUsuario" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="ex.: estocado"></label>
-    <label class="campo"><span>Senha</span>
-      <input id="lgSenha" type="password" autocomplete="${modo==='entrar'?'current-password':'new-password'}" placeholder="Mínimo de 6 caracteres"></label>
-    <button class="btn gr" id="btnLogin" data-acao="login">${
-      modo==='configurar' ? 'Criar administrador' : modo==='ativar' ? 'Ativar meu acesso' : 'Entrar'}</button>
-    ${modo==='entrar'
-      ? `<p class="legenda" style="text-align:center;margin:16px 0 0">Recebeu um usuário do administrador?
-         <a href="#" data-acao="modo-ativar" style="color:var(--tinta);font-weight:600">Defina sua senha</a></p>`
-      : modo==='ativar'
-      ? `<p class="legenda" style="text-align:center;margin:16px 0 0"><a href="#" data-acao="modo-entrar" style="color:var(--tinta);font-weight:600">Voltar para entrar</a></p>` : ''}`;
-  el('lgUsuario').focus();
+function trocarAbaLogin(qual){
+  abaLogin = qual;
+  el('abaEntrar').setAttribute('aria-selected', qual==='entrar');
+  el('abaCriar').setAttribute('aria-selected', qual==='criar');
+  el('campoNome').style.display = qual==='criar' ? 'block' : 'none';
+  el('btnLogin').textContent = qual==='criar' ? 'Criar acesso' : 'Entrar';
+  el('lgSenha').setAttribute('autocomplete', qual==='criar'?'new-password':'current-password');
+  el('msgLogin').innerHTML='';
 }
-function trocarModoLogin(m){ abaLogin = m; msgLogin(''); pintarLogin(); }
+function msgLogin(txt, ok){ el('msgLogin').innerHTML = `<div class="${ok?'ok-login':'erro-login'}">${esc(txt)}</div>`; }
 
 async function enviarLogin(){
-  const usuario = limparUsuario(el('lgUsuario').value);
-  const senha = el('lgSenha').value;
-  const nome = el('lgNome') ? el('lgNome').value.trim() : '';
+  const fone = el('lgFone').value, senha = el('lgSenha').value, nome = el('lgNome').value.trim();
   const btn = el('btnLogin');
-  if(!usuario){ msgLogin('Informe o usuário.'); return; }
+  if(soDigitos(fone).length < 10){ msgLogin('Informe o celular com DDD.'); return; }
   if(senha.length < 6){ msgLogin('A senha precisa de pelo menos 6 caracteres.'); return; }
-  if(abaLogin!=='entrar' && !nome){ msgLogin('Informe seu nome — ele aparece em cada baixa registrada.'); return; }
+  if(abaLogin==='criar' && !nome){ msgLogin('Informe seu nome — ele aparece em cada baixa registrada.'); return; }
 
-  btn.disabled = true; btn.textContent = 'Aguarde…'; msgLogin('');
+  btn.disabled = true; btn.textContent = 'Aguarde…';
   try{
-    const email = emailInterno(usuario);
-    if(abaLogin==='entrar'){
-      const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+    const email = emailInterno(fone);
+    if(abaLogin==='criar'){
+      const { error } = await sb.auth.signUp({ email, password: senha,
+        options:{ data:{ nome, telefone: soDigitos(fone) } } });
       if(error) throw error;
-    } else {
-      const { error } = await sb.auth.signUp({ email, password: senha, options:{ data:{ nome, usuario } } });
-      if(error && !/already registered|User already/i.test(error.message)) throw error;
       const { error: e2 } = await sb.auth.signInWithPassword({ email, password: senha });
       if(e2) throw e2;
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+      if(error) throw error;
     }
-    const { error: e3 } = await sb.rpc('alm_garantir_perfil', { p_nome: nome||null, p_telefone: null });
-    if(e3){ await sb.auth.signOut(); throw e3; }
+    await sb.rpc('alm_garantir_perfil', { p_nome: nome || null, p_telefone: soDigitos(fone) });
     await entrarNoSistema();
   }catch(e){
     const m = String(e.message||e);
-    if(/não autorizado/i.test(m)) msgLogin(m);
-    else if(/Invalid login credentials/i.test(m)) msgLogin(abaLogin==='entrar'
-      ? 'Usuário ou senha não conferem.'
-      : 'Esse usuário já existe com outra senha. Peça ao administrador para reativar seu acesso.');
-    else if(/signups not allowed|Signups not allowed/i.test(m)) msgLogin('Cadastro bloqueado no Supabase: ative "Allow new users to sign up" em Authentication → Sign In / Providers.');
-    else if(/Email logins are disabled/i.test(m)) msgLogin('Ative o provedor Email em Authentication → Sign In / Providers no Supabase.');
-    else if(/confirm/i.test(m)) msgLogin('Desligue "Confirm email" em Authentication → Sign In / Providers no Supabase.');
-    else if(/invalid.*email/i.test(m)) msgLogin('O Supabase recusou o domínio interno. Troque DOMINIO_INTERNO em assets/config.js.');
+    if(/Invalid login credentials/i.test(m)) msgLogin('Celular ou senha não conferem.');
+    else if(/already registered|User already/i.test(m)) msgLogin('Esse celular já tem acesso. Use a aba Entrar.');
+    else if(/Email logins are disabled|signups not allowed/i.test(m)) msgLogin('Cadastro desativado no painel do Supabase. Ative Email provider e desligue "Confirm email".');
+    else if(/confirm/i.test(m)) msgLogin('Ative o acesso desligando "Confirm email" em Auth > Providers no Supabase.');
     else msgLogin(m);
-    pintarLogin();
-  }
+  }finally{ btn.disabled=false; trocarAbaLogin(abaLogin); }
 }
 
 async function sair(){
@@ -178,30 +132,20 @@ async function sair(){
   await sb.auth.signOut();
   perfil=null; S.produtos=[];
   el('app').style.display='none'; el('login').style.display='flex';
-  await montarLogin();
+  el('lgSenha').value='';
 }
 
 async function entrarNoSistema(){
   const { data:{ user } } = await sb.auth.getUser();
   if(!user) return;
   const { data: p, error } = await sb.rpc('alm_garantir_perfil', { p_nome:null, p_telefone:null });
-  if(error){ await sb.auth.signOut(); msgLogin(erroBanco(error)); await montarLogin(); return; }
+  if(error){ msgLogin(erroBanco(error)); return; }
   perfil = Array.isArray(p) ? p[0] : p;
-  if(!perfil.ativo){ await sb.auth.signOut(); msgLogin('Seu acesso está desativado. Procure o administrador do almoxarifado.'); return; }
+  if(!perfil.ativo){ await sb.auth.signOut(); msgLogin('Seu acesso está desativado. Procure o gestor do almoxarifado.'); return; }
   el('login').style.display='none'; el('app').style.display='block';
   el('nomeEmpresa').textContent = CONFIG.EMPRESA;
   el('quemSou').innerHTML = `${esc(perfil.nome)} <span class="papel">${esc(perfil.papel)}</span>`;
   await recarregar();
-  const pedido = new URLSearchParams(location.search).get('c');
-  if(pedido){
-    history.replaceState(null,'','/');
-    const p = acha(pedido);
-    if(p){ vista='saida'; selecionado=p; pintarAbas(); render();
-      setTimeout(()=>{ const q=el('fQtd'); if(q){ q.focus(); q.select(); } },120);
-      return;
-    }
-    aviso('Etiqueta lida: código '+pedido+' não está cadastrado.','ruim');
-  }
   pintarAbas(); render();
 }
 
@@ -504,7 +448,7 @@ function vEtiquetas(){
         <input class="sel" type="checkbox" data-acao="etq-marca" data-id="${p.id}" ${etqSel.has(p.id)?'checked':''} aria-label="Selecionar ${esc(p.nome)}">
         <div class="in"><div class="txt"><div class="c">${p.codigo}</div><div class="n">${esc(p.nome)}</div>
         <div class="l">${esc(p.local)} · ${p.unidade} · mín. ${num(p.minimo)}</div></div>
-        <div class="qr" data-qr="${urlEtiqueta(p.codigo)}" data-tam="76"></div></div></div>`).join('')}
+        <div class="qr" data-qr="${p.codigo}" data-tam="76"></div></div></div>`).join('')}
     </div></div>`;
 }
 
@@ -641,17 +585,6 @@ function vCadastros(){
       <div id="listaEquipe" class="sincro">Carregando…</div>
     </div>
 
-    ${g?`<div class="bloco"><h2>Liberar novo acesso</h2>
-      <p class="legenda" style="padding:14px 16px 0;margin:0">Ninguém entra sozinho. Você libera o usuário aqui, passa o nome de usuário para a pessoa, e ela define a própria senha na tela de acesso.</p>
-      <div id="listaConvites" class="sincro">Carregando…</div>
-      <div class="add-linha" style="flex-wrap:wrap">
-        <input id="cvUsuario" type="text" placeholder="usuário (sem espaços)" style="min-width:140px">
-        <input id="cvNome" type="text" placeholder="Nome da pessoa" style="min-width:140px">
-        <select id="cvPapel" style="width:auto"><option value="almoxarife">almoxarife</option><option value="gestor">gestor</option><option value="admin">admin</option></select>
-        <button class="btn" data-acao="criar-convite">Liberar</button>
-      </div>
-    </div>`:''}
-
     <div class="bloco"><h2>Sua conta</h2><div class="corpo">
       <div class="meta"><span>Nome <b>${esc(perfil.nome)}</b></span><span>Papel <b>${esc(perfil.papel)}</b></span>
         <span>Celular <b>${esc(perfil.telefone||'—')}</b></span></div>
@@ -673,27 +606,12 @@ async function carregarEquipe(){
       ${['almoxarife','gestor','admin'].map(p=>`<option ${u.papel===p?'selected':''}>${p}</option>`).join('')}</select>
       <button class="btn sec" style="padding:5px 9px" data-acao="alternar-ativo" data-id="${u.id}" data-ativo="${u.ativo}">${u.ativo?'Desativar':'Ativar'}</button>`
       :`<span class="papel" style="margin-left:auto">${esc(u.papel)}</span>`}</li>`).join('')}</ul>`;
-  carregarConvites();
-}
-async function carregarConvites(){
-  const alvo = el('listaConvites'); if(!alvo) return;
-  const { data, error } = await sb.from('alm_convites').select('*').order('criado_em',{ascending:false});
-  if(error){ alvo.textContent = erroBanco(error); return; }
-  alvo.classList.remove('sincro');
-  alvo.innerHTML = data.length ? `<ul class="lista-simples">${data.map(c=>`<li>
-    <div><div class="nome-prod mono">${esc(c.usuario)}</div>
-    <div class="sub-prod">${esc(c.nome||'—')} · ${esc(c.papel)} · ${c.usado_em?'já ativado':'aguardando a pessoa definir a senha'}</div></div>
-    ${c.usado_em?'<span class="selo ok" style="margin-left:auto">Ativo</span>'
-     :`<span class="selo neutro" style="margin-left:auto">Pendente</span>
-       <button class="x" data-acao="del-convite" data-id="${c.id}" aria-label="Cancelar liberação">&times;</button>`}</li>`).join('')}</ul>`
-    : '<div class="vazio" style="padding:20px"><b>Nenhum acesso liberado</b>Use o campo abaixo para liberar alguém.</div>';
 }
 
 /* ===================================================================
    LEITURA DE CÓDIGO
    =================================================================== */
-function abrirProduto(entrada){
-  const codigo = codigoDaLeitura(entrada);
+function abrirProduto(codigo){
   const p = acha(codigo);
   if(!p){ aviso('Código '+codigo+' não encontrado.','ruim'); buscarPorNome(codigo); return; }
   if(vista==='inventario'){ F.iBusca = p.codigo; render(); const c=document.querySelector(`[data-contar]`); if(c) c.focus(); return; }
@@ -944,7 +862,7 @@ function imprimirEtiquetas(){
   imprimir(`<div class="etq-grade">${ps.map(p=>`<div class="etq"><div class="tarja"></div><div class="in">
     <div class="txt"><div class="c">${p.codigo}</div><div class="n">${esc(p.nome)}</div>
     <div class="l">${esc(p.local)} · ${p.unidade} · mín. ${num(p.minimo)}</div></div>
-    <div class="qr" data-qr="${urlEtiqueta(p.codigo)}" data-tam="86"></div></div></div>`).join('')}</div>`, true);
+    <div class="qr" data-qr="${p.codigo}" data-tam="86"></div></div></div>`).join('')}</div>`, true);
 }
 function imprimirRelatorio(){
   const dia = F.rData||hoje();
@@ -1031,26 +949,9 @@ document.addEventListener('click', async ev => {
   if(ev.target.classList?.contains('cortina')){ fecharModal(); return; }
   const alvo = ev.target.closest('[data-acao]'); if(!alvo) return;
   const a = alvo.dataset.acao, id = alvo.dataset.id;
-  if(a==='login' || a==='modo-ativar' || a==='modo-entrar'){
-    ev.preventDefault();
-    if(a==='login') await enviarLogin(); else trocarModoLogin(a==='modo-ativar'?'ativar':'entrar');
-    return;
-  }
   try{
     switch(a){
       case 'ir': await ir(alvo.dataset.vista); break;
-      case 'criar-convite': {
-        const usuario = limparUsuario(el('cvUsuario').value);
-        if(!usuario) return aviso('Informe o nome de usuário da pessoa.','ruim');
-        const { error } = await sb.from('alm_convites').insert({usuario, nome: el('cvNome').value.trim(), papel: el('cvPapel').value});
-        if(error) return aviso(erroBanco(error),'ruim');
-        el('cvUsuario').value=''; el('cvNome').value='';
-        carregarConvites();
-        aviso(`Acesso liberado para "${usuario}". Passe esse usuário para a pessoa — ela define a senha na tela de acesso.`,'bom'); break; }
-      case 'del-convite': {
-        const { error } = await sb.from('alm_convites').delete().eq('id',id);
-        if(error) return aviso(erroBanco(error),'ruim');
-        carregarConvites(); break; }
       case 'fechar-modal': fecharModal(); break;
       case 'buscar-cod': lerCampo(); break;
       case 'camera': abrirCamera(); break;
@@ -1154,19 +1055,7 @@ render = function(){ renderOriginal(); if(vista==='cadastros') carregarEquipe();
 
 /* ---------------- partida ---------------- */
 (async () => {
-  try{
-    const { data:{ session } } = await sb.auth.getSession();
-    if(session){ await entrarNoSistema(); }
-    else { el('login').style.display='flex'; await montarLogin(); }
-  }catch(e){
-    el('login').style.display='flex';
-    el('areaLogin').innerHTML = `<div class="erro-login">Falha ao iniciar: ${esc(e.message||e)}</div>
-      <p class="legenda">Recarregue a página. Se persistir, confira a URL e a chave em assets/config.js.</p>`;
-  }
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) await entrarNoSistema();
+  else { el('login').style.display='flex'; el('lgFone').focus(); }
 })();
-window.addEventListener('error', ev => {
-  const area = el('areaLogin');
-  if(area && el('login').style.display!=='none' && !el('btnLogin')){
-    area.innerHTML = `<div class="erro-login">Erro de carregamento: ${esc(ev.message)}</div>`;
-  }
-});
