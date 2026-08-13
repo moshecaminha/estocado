@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOBILIZZA.ORG · Administração</title>
+<style>
+:root{--navy:#0A1628;--brand:#00A878;--brand-2:#00805F;--gold-2:#D97706;--coral:#DC2626;--blue:#2563EB;--purple:#6D28D9;--bg:#F5F7FA;--card:#fff;--ink:#0F172A;--ink-2:#1E293B;--muted:#64748B;--border:#E2E8F0;--soft:#F8FAFC}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select{font-family:inherit;outline:none;color:var(--ink)}
+.btn{background:var(--brand);color:#fff;padding:10px 16px;border-radius:9px;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--brand-2)}
+.btn.ghost{background:#fff;color:var(--ink-2);border:1px solid var(--border)}
+.btn.ghost:hover{background:var(--soft)}
+.btn.danger{background:var(--coral);color:#fff}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
+label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:10px 0 4px}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:14px;background:#fff}
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0A1628,#13213D 60%,#1A2C4F);padding:20px}
+.login-card{background:#fff;border-radius:18px;padding:34px;width:400px;max-width:100%;box-shadow:0 30px 80px -20px rgba(0,0,0,.5)}
+.logo{width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,#00E5A8,#00805F);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:22px}
+#app{display:none;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.tabs{display:flex;gap:6px;padding:14px 24px 0}
+.tab{padding:9px 16px;border-radius:9px 9px 0 0;font-weight:700;font-size:13px;color:var(--muted)}
+.tab.on{background:#fff;color:var(--ink);border:1px solid var(--border);border-bottom:none}
+.wrap{padding:20px 24px;max-width:1200px}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+.card h3{font-size:15px;margin-bottom:4px}
+.sub{font-size:12px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:8px;border-bottom:1px solid var(--border)}
+td{padding:9px 8px;border-bottom:1px solid var(--soft);vertical-align:middle}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge.admin{background:#EEF2FF;color:#4338CA}.badge.coord{background:#ECFDF5;color:#047857}.badge.assessor{background:#FEF3C7;color:#B45309}.badge.super{background:#FCE7F3;color:#BE185D}
+.chip{display:inline-block;background:var(--soft);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;margin:2px}
+.grid{display:grid;gap:12px}
+.kpi{background:var(--soft);border-radius:10px;padding:10px 12px;text-align:center}
+.kpi .v{font-size:20px;font-weight:800}.kpi .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.modal-bg{position:fixed;inset:0;background:rgba(10,22,40,.55);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:660px;max-width:100%;max-height:88vh;overflow-y:auto}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;z-index:100;opacity:0;transition:.2s;pointer-events:none}
+.toast.show{opacity:1}
+.err{color:var(--coral);font-size:13px;margin-top:8px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="login-card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="logo">M</div>
+      <div><div style="font-size:20px;font-weight:800">MOBILIZZA<span style="opacity:.55;font-weight:600">.org</span></div><div class="sub">Painel do administrador</div></div>
+    </div>
+    <label>E-mail</label>
+    <input id="lg-email" type="email" placeholder="voce@email.com" autocomplete="username">
+    <label>Senha</label>
+    <input id="lg-pass" type="password" placeholder="••••••" autocomplete="current-password">
+    <button class="btn" style="width:100%;justify-content:center;margin-top:16px" onclick="doLogin()">Entrar</button>
+    <div id="lg-err" class="err"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="logo" style="width:36px;height:36px;font-size:18px;border-radius:9px">M</div>
+    <div style="flex:1"><strong>MOBILIZZA<span style="opacity:.55;font-weight:600">.org</span></strong> <span class="sub">· Administração da plataforma</span></div>
+    <span id="who" class="sub"></span>
+    <button class="btn ghost sm" onclick="doLogout()">Sair</button>
+  </div>
+  <div class="tabs">
+    <div class="tab on" id="tab-cand" onclick="switchTab('cand')">Candidatos</div>
+    <div class="tab" id="tab-user" onclick="switchTab('user')">Usuários</div>
+  </div>
+  <div class="wrap">
+    <div id="view-cand"></div>
+    <div id="view-user" style="display:none"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://dhxizqszipfnlpojzpbc.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoeGl6cXN6aXBmbmxwb2p6cGJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NDgyNzYsImV4cCI6MjA5ODMyNDI3Nn0.Mb8IKH9MKumo4H4bag5iAjD7IXS8ogg9skKrCdvqV1M';
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let SESSION = null;
+let CACHE = { candidates: [], users: [], memberships: [] };
+const OFFICES = {deputado_estadual:'Deputado Estadual',deputado_federal:'Deputado Federal',prefeito:'Prefeito',vereador:'Vereador',governador:'Governador',senador:'Senador',presidente:'Presidente'};
+
+const esc = s => (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = id => document.getElementById(id);
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+function money(v){ return 'R$ '+(+v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+// Chama uma RPC do banco (gated por superadmin no servidor)
+async function rpc(fn, args){
+  const { data, error } = await sb.rpc(fn, args||{});
+  if(error) throw new Error(error.message||('erro em '+fn));
+  return data;
+}
+
+window.doLogin = async function(){
+  const email=$('lg-email').value.trim(), password=$('lg-pass').value;
+  $('lg-err').textContent='';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ $('lg-err').textContent = 'Login falhou: '+error.message; return; }
+  SESSION = data.session;
+  try { await enterApp(); }
+  catch(e){ $('lg-err').textContent = e.message; await sb.auth.signOut(); }
+};
+window.doLogout = async function(){ await sb.auth.signOut(); location.reload(); };
+
+async function enterApp(){
+  CACHE.candidates = await rpc('mob_admin_candidates'); // barra quem não é superadmin
+  $('who').textContent = SESSION.user.email;
+  $('login').style.display='none';
+  $('app').style.display='block';
+  renderCandidates();
+  loadUsers();
+}
+window.switchTab = function(t){
+  $('tab-cand').classList.toggle('on', t==='cand');
+  $('tab-user').classList.toggle('on', t==='user');
+  $('view-cand').style.display = t==='cand'?'':'none';
+  $('view-user').style.display = t==='user'?'':'none';
+};
+
+// ---------------- CANDIDATOS ----------------
+async function refreshCandidates(){ CACHE.candidates = await rpc('mob_admin_candidates'); renderCandidates(); }
+function kpi(v,l){ return '<div class="kpi"><div class="v">'+(v??0)+'</div><div class="l">'+l+'</div></div>'; }
+
+function renderCandidates(){
+  const list = CACHE.candidates||[];
+  let h = '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><h3>Candidatos ('+list.length+')</h3><div class="sub">Cada candidato é uma base isolada. Veja os dados, gerencie a equipe ou exclua.</div></div><button class="btn" onclick="modalCandidate()">+ Novo candidato</button></div></div>';
+  if(!list.length){ h += '<div class="card sub">Nenhum candidato ainda. Crie o primeiro.</div>'; $('view-cand').innerHTML=h; return; }
+  list.forEach(c=>{
+    const rep=c.report||{}, f=rep.finance||{};
+    const team=(c.team||[]).map(m=>'<span class="chip">'+esc(m.email||'?')+' · '+m.role+'</span>').join(' ')||'<span class="sub">sem equipe</span>';
+    h += '<div class="card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
+        +'<div style="display:flex;gap:12px;align-items:center">'
+          +'<div style="width:46px;height:46px;border-radius:12px;background:'+(esc(c.theme_color||'#00A878'))+';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;overflow:hidden">'+(c.photo_url?'<img src="'+esc(c.photo_url)+'" style="width:100%;height:100%;object-fit:cover">':esc((c.name||'?').slice(0,1).toUpperCase()))+'</div>'
+          +'<div><div style="font-weight:800;font-size:15px">'+esc(c.name)+' <span class="sub">'+(c.party_number?'· '+esc(c.party_number):'')+'</span></div>'
+          +'<div class="sub">'+(OFFICES[c.office]||esc(c.office||'—'))+' · '+esc(c.uf||'')+(c.city?'/'+esc(c.city):'')+' · '+c.election_year+'</div></div>'
+        +'</div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+          +'<button class="btn ghost sm" onclick="viewData(\''+c.id+'\')">Ver dados</button>'
+          +'<button class="btn ghost sm" onclick="manageTeam(\''+c.id+'\')">Equipe</button>'
+          +'<button class="btn ghost sm" onclick="modalCandidate(\''+c.id+'\')">Editar</button>'
+          +'<button class="btn danger sm" onclick="delCandidate(\''+c.id+'\',\''+esc(c.name).replace(/\x27/g,"")+'\')">Excluir</button>'
+        +'</div>'
+      +'</div>'
+      +'<div class="grid" style="grid-template-columns:repeat(6,1fr);margin-top:14px">'
+        +kpi(rep.leaders,'Lideranças')+kpi(rep.militants,'Militantes')+kpi(rep.leads,'Leads')
+        +kpi(rep.events,'Eventos')+kpi(rep.checkins,'Check-ins')+kpi((rep.votes_estimated||0).toLocaleString('pt-BR'),'Votos est.')
+      +'</div>'
+      +'<div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px">'
+        +kpi(money(f.income),'Receitas')+kpi(money(f.expense),'Despesas')+kpi(money(f.donations),'Doações')
+      +'</div>'
+      +'<div style="margin-top:12px">'+team+'</div>'
+    +'</div>';
+  });
+  $('view-cand').innerHTML = h;
+}
+
+window.modalCandidate = function(id){
+  const c = id? (CACHE.candidates.find(x=>x.id===id)||{}) : {};
+  const opt = Object.entries(OFFICES).map(([k,v])=>'<option value="'+k+'"'+(c.office===k?' selected':'')+'>'+v+'</option>').join('');
+  showModal('<h3>'+(id?'Editar':'Novo')+' candidato</h3>'
+    +'<label>Nome *</label><input id="c-name" value="'+esc(c.name||'')+'">'
+    +'<div class="form-row"><div><label>Cargo</label><select id="c-office"><option value="">—</option>'+opt+'</select></div><div><label>Ano da eleição</label><select id="c-year"><option'+(c.election_year===2026?' selected':'')+'>2026</option><option'+(c.election_year===2028?' selected':'')+'>2028</option></select></div></div>'
+    +'<div class="form-row"><div><label>UF</label><input id="c-uf" maxlength="2" style="text-transform:uppercase" value="'+esc(c.uf||'')+'"></div><div><label>Cidade</label><input id="c-city" value="'+esc(c.city||'')+'"></div></div>'
+    +'<div class="form-row"><div><label>Partido</label><input id="c-party" value="'+esc(c.party||'')+'"></div><div><label>Número</label><input id="c-num" value="'+esc(c.party_number||'')+'"></div></div>'
+    +'<div class="form-row"><div><label>Cor do tema</label><input id="c-color" type="color" value="'+(esc(c.theme_color||'#00A878'))+'" style="height:44px;padding:4px"></div><div><label>Foto (URL)</label><input id="c-photo" value="'+esc(c.photo_url||'')+'" placeholder="https://…"></div></div>'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCandidate('+(id?"'"+id+"'":'null')+')">Salvar</button></div>');
+};
+window.saveCandidate = async function(id){
+  const p = { name:$('c-name').value.trim(), office:$('c-office').value, election_year:+$('c-year').value,
+    uf:$('c-uf').value.trim().toUpperCase(), city:$('c-city').value.trim(), party:$('c-party').value.trim(),
+    party_number:$('c-num').value.trim(), theme_color:$('c-color').value, photo_url:$('c-photo').value.trim() };
+  if(!p.name){ toast('Informe o nome'); return; }
+  try{ await rpc('mob_admin_save_candidate',{ p_id:id||null, p_data:p }); closeModal(); toast('Salvo'); refreshCandidates(); }
+  catch(e){ toast(e.message); }
+};
+window.delCandidate = async function(id,name){
+  if(!confirm('Excluir "'+name+'" e TODOS os dados dessa campanha? Isso é irreversível.')) return;
+  try{ await rpc('mob_admin_delete_candidate',{ p_id:id }); toast('Excluído'); refreshCandidates(); }catch(e){ toast(e.message); }
+};
+
+window.viewData = async function(id){
+  showModal('<h3>Carregando dados…</h3>');
+  try{
+    const data = await rpc('mob_admin_candidate_data',{ p_id:id });
+    const c = CACHE.candidates.find(x=>x.id===id)||{};
+    // Relatório resumido (KPIs + distribuição por cidade)
+    let repBlock='';
+    try{
+      const rep = await rpc('mob_candidate_report',{ p_candidate:id });
+      if(rep && rep.ok){
+        const box=(l,v)=>'<div style="flex:1;min-width:104px;padding:10px;background:#F1F5F9;border-radius:8px;border-left:3px solid #00A878"><div style="font-size:10px;text-transform:uppercase;color:#64748B;font-weight:700;letter-spacing:.04em">'+l+'</div><div style="font-size:19px;font-weight:800">'+v+'</div></div>';
+        const cityTbl=(t,arr,valk)=>{ arr=arr||[]; if(!arr.length) return ''; return '<div style="margin-top:12px"><strong>'+t+'</strong><div style="overflow-x:auto;margin-top:6px"><table><thead><tr><th>Cidade</th><th>UF</th><th style="text-align:right">'+valk.toUpperCase()+'</th></tr></thead><tbody>'+arr.map(function(x){return '<tr><td>'+esc(x.city||'—')+'</td><td>'+esc(x.uf||'')+'</td><td style="text-align:right">'+(x[valk]||0)+'</td></tr>';}).join('')+'</tbody></table></div></div>'; };
+        repBlock='<div style="margin-bottom:6px"><strong>Relatório resumido</strong></div>'
+          +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
+            +box('Lideranças',rep.leaders)+box('Militância',rep.militants)+box('Leads',rep.leads)
+            +box('Eventos',rep.events)+box('Check-ins',rep.checkins)+box('Compart.',rep.checkins_shared)
+            +box('Votos est.',(rep.votes_estimated||0).toLocaleString('pt-BR'))
+            +box('Custo camp.','R$ '+(rep.campaigns_cost||0))
+          +'</div>'
+          +cityTbl('Leads por cidade',rep.leads_by_city,'leads')
+          +cityTbl('Base (lideranças + militância) por cidade',rep.people_by_city,'total')
+          +'<div style="height:14px;border-bottom:1px solid var(--border);margin-bottom:6px"></div>';
+      }
+    }catch(e){}
+    const sec=(t,arr,cols)=>{
+      arr=arr||[];
+      if(!arr.length) return '<div style="margin-top:14px"><strong>'+t+'</strong> <span class="sub">— vazio</span></div>';
+      const head=cols.map(k=>'<th>'+k+'</th>').join('');
+      const rows=arr.slice(0,50).map(r=>'<tr>'+cols.map(k=>'<td>'+esc(r[k]??'')+'</td>').join('')+'</tr>').join('');
+      return '<div style="margin-top:16px"><strong>'+t+' ('+arr.length+')</strong><div style="overflow-x:auto;margin-top:6px"><table><thead><tr>'+head+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    };
+    showModal('<h3>Dados · '+esc(c.name)+'</h3><div class="sub">Somente leitura. Bases isoladas deste candidato.</div>'
+      +repBlock
+      +sec('Lideranças',data.leaders,['name','role','bairro','city','uf','last_election_votes'])
+      +sec('Militantes',data.militants,['name','phone','bairro','city','source'])
+      +sec('Leads (eventos)',data.leads,['name','phone','bairro','city','number','status'])
+      +sec('Eventos',data.events,['title','date','location','bairro','city'])
+      +sec('Regiões',data.regions,['name','voter_count','intensity'])
+      +sec('Financeiro',data.finance_transactions,['type','category','description','amount','date'])
+      +sec('Doações',data.donations,['donor','cpf_cnpj','type','amount'])
+      +sec('Comitês',data.committees,['name','responsible','bairro','city'])
+      +sec('Produtos',data.products,['name','category','unit','unit_cost'])
+      +sec('Campanhas',data.campaigns,['name','channel','reach','cost_brl','status'])
+      +'<div style="text-align:right;margin-top:16px"><button class="btn ghost" onclick="closeModal()">Fechar</button></div>');
+  }catch(e){ showModal('<h3>Erro</h3><div class="err">'+esc(e.message)+'</div><div style="text-align:right;margin-top:14px"><button class="btn ghost" onclick="closeModal()">Fechar</button></div>'); }
+};
+
+window.manageTeam = function(id){
+  const c = CACHE.candidates.find(x=>x.id===id)||{};
+  const team=(c.team||[]).map(m=>'<tr><td>'+esc(m.email||'?')+'</td><td><span class="badge '+(m.role==='admin'?'admin':m.role==='coordenador'?'coord':'assessor')+'">'+m.role+'</span></td>'
+    +'<td style="text-align:right"><button class="btn ghost sm" onclick="changeRole(\''+id+'\',\''+m.user_id+'\')">Papel</button> <button class="btn danger sm" onclick="removeMember(\''+id+'\',\''+m.user_id+'\')">Remover</button></td></tr>').join('')
+    ||'<tr><td colspan="3" class="sub">Sem equipe ainda.</td></tr>';
+  showModal('<h3>Equipe · '+esc(c.name)+'</h3>'
+    +'<table style="margin-top:10px"><thead><tr><th>E-mail</th><th>Papel</th><th></th></tr></thead><tbody>'+team+'</tbody></table>'
+    +'<div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px"><strong>Adicionar membro</strong>'
+      +'<div class="form-row" style="margin-top:8px"><div><label>E-mail</label><input id="m-email" placeholder="pessoa@email.com"></div><div><label>Papel</label><select id="m-role"><option value="coordenador">Coordenador</option><option value="assessor">Assessor</option><option value="admin">Admin da campanha</option></select></div></div>'
+      +'<label>Senha inicial (se a conta ainda não existe)</label><input id="m-pass" placeholder="opcional — padrão mobiliza123">'
+      +'<div style="text-align:right;margin-top:12px"><button class="btn" onclick="addMember(\''+id+'\')">Adicionar</button></div>'
+    +'</div>'
+    +'<div style="text-align:right;margin-top:8px"><button class="btn ghost" onclick="closeModal()">Fechar</button></div>');
+};
+window.addMember = async function(cid){
+  const email=$('m-email').value.trim(), role=$('m-role').value, password=$('m-pass').value.trim();
+  if(!email){ toast('Informe o e-mail'); return; }
+  try{ const r=await rpc('mob_admin_add_member',{ p_candidate:cid, p_email:email, p_role:role, p_password:password||null });
+    toast(r.created?'Conta criada e vinculada':'Vinculado'); await refreshCandidates(); manageTeam(cid); }
+  catch(e){ toast(e.message); }
+};
+window.changeRole = async function(cid,uid){
+  const role = prompt('Novo papel (admin / coordenador / assessor):'); if(!role) return;
+  try{ await rpc('mob_admin_set_member_role',{ p_candidate:cid, p_user_id:uid, p_role:role.trim() }); toast('Papel atualizado'); await refreshCandidates(); manageTeam(cid); }catch(e){ toast(e.message); }
+};
+window.removeMember = async function(cid,uid){
+  if(!confirm('Remover este membro da campanha?')) return;
+  try{ await rpc('mob_admin_remove_member',{ p_candidate:cid, p_user_id:uid }); toast('Removido'); await refreshCandidates(); manageTeam(cid); }catch(e){ toast(e.message); }
+};
+
+// ---------------- USUÁRIOS ----------------
+async function loadUsers(){
+  try{ const r=await rpc('mob_admin_users'); CACHE.users=r.users||[]; CACHE.memberships=r.memberships||[]; renderUsers(); }
+  catch(e){ $('view-user').innerHTML='<div class="card err">'+esc(e.message)+'</div>'; }
+}
+function renderUsers(){
+  const byUser={}; CACHE.memberships.forEach(m=>{ (byUser[m.user_id]=byUser[m.user_id]||[]).push((m.candidate||'?')+' ('+m.role+')'); });
+  let h='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><h3>Usuários ('+CACHE.users.length+')</h3><div class="sub">Coordenadores, assessores e administradores da plataforma.</div></div><button class="btn" onclick="modalUser()">+ Novo usuário</button></div></div>';
+  h+='<div class="card"><div style="overflow-x:auto"><table><thead><tr><th>E-mail</th><th>Nome</th><th>Tipo</th><th>Campanhas</th><th style="text-align:right">Ações</th></tr></thead><tbody>';
+  CACHE.users.forEach(u=>{
+    const camps=(byUser[u.id]||[]).map(x=>'<span class="chip">'+esc(x)+'</span>').join(' ')||'<span class="sub">—</span>';
+    h+='<tr><td><strong>'+esc(u.email)+'</strong></td><td>'+esc(u.name||'')+'</td>'
+      +'<td>'+(u.is_platform_admin?'<span class="badge super">Superadmin</span>':'<span class="sub">usuário</span>')+'</td>'
+      +'<td>'+camps+'</td>'
+      +'<td style="text-align:right;white-space:nowrap">'
+        +'<button class="btn ghost sm" onclick="setPass(\''+u.id+'\',\''+esc(u.email)+'\')">Senha</button> '
+        +'<button class="btn ghost sm" onclick="toggleAdmin(\''+u.id+'\','+(u.is_platform_admin?'false':'true')+')">'+(u.is_platform_admin?'Tirar admin':'Tornar admin')+'</button> '
+        +'<button class="btn danger sm" onclick="delUser(\''+u.id+'\',\''+esc(u.email)+'\')">Excluir</button>'
+      +'</td></tr>';
+  });
+  h+='</tbody></table></div></div>';
+  $('view-user').innerHTML=h;
+}
+window.modalUser=function(){
+  showModal('<h3>Novo usuário</h3>'
+    +'<label>E-mail *</label><input id="u-email" type="email">'
+    +'<label>Nome</label><input id="u-name">'
+    +'<label>Senha *</label><input id="u-pass" placeholder="mínimo 6 caracteres">'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-top:14px;text-transform:none;font-size:13px"><input type="checkbox" id="u-admin" style="width:auto"> Superadmin da plataforma (vê todos os candidatos)</label>'
+    +'<div style="text-align:right;margin-top:16px"><button class="btn ghost" onclick="closeModal()">Cancelar</button> <button class="btn" onclick="saveUser()">Criar</button></div>');
+};
+window.saveUser=async function(){
+  const email=$('u-email').value.trim(), name=$('u-name').value.trim(), password=$('u-pass').value, is_admin=$('u-admin').checked;
+  if(!email||password.length<6){ toast('E-mail e senha (6+) obrigatórios'); return; }
+  try{ await rpc('mob_admin_create_user',{ p_email:email, p_password:password, p_name:name, p_is_admin:is_admin }); closeModal(); toast('Usuário criado'); loadUsers(); }catch(e){ toast(e.message); }
+};
+window.setPass=async function(uid,email){
+  const p=prompt('Nova senha para '+email+':'); if(!p) return; if(p.length<6){ toast('Mínimo 6 caracteres'); return; }
+  try{ await rpc('mob_admin_set_password',{ p_user_id:uid, p_password:p }); toast('Senha alterada'); }catch(e){ toast(e.message); }
+};
+window.toggleAdmin=async function(uid,val){
+  try{ await rpc('mob_admin_update_user',{ p_user_id:uid, p_name:null, p_is_admin:val }); toast('Atualizado'); loadUsers(); }catch(e){ toast(e.message); }
+};
+window.delUser=async function(uid,email){
+  if(!confirm('Excluir o usuário '+email+'? A conta de acesso será removida.')) return;
+  try{ await rpc('mob_admin_delete_user',{ p_user_id:uid }); toast('Excluído'); loadUsers(); refreshCandidates(); }catch(e){ toast(e.message); }
+};
+
+// ---------------- util ----------------
+function showModal(html){ $('modal').innerHTML=html; $('modal-bg').classList.add('show'); }
+window.closeModal=function(){ $('modal-bg').classList.remove('show'); };
+$('modal-bg').addEventListener('click',e=>{ if(e.target===$('modal-bg')) closeModal(); });
+$('lg-pass').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+(async()=>{ const { data } = await sb.auth.getSession(); if(data.session){ SESSION=data.session; try{ await enterApp(); }catch(e){} } })();
+</script>
+</body>
+</html>
