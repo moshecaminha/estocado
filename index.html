@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15211E">
+<title>Almoxarifado — Controle de Estoque</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <div class="cartao-login">
+    <div class="tarja"></div>
+    <div class="in">
+      <h1>Almoxarifado</h1>
+      <p class="sub">Controle de estoque · acesso restrito</p>
+
+      <div class="aba-login">
+        <button id="abaEntrar" aria-selected="true" onclick="trocarAbaLogin('entrar')">Entrar</button>
+        <button id="abaCriar" aria-selected="false" onclick="trocarAbaLogin('criar')">Criar acesso</button>
+      </div>
+
+      <div id="msgLogin"></div>
+
+      <div id="formLogin">
+        <label class="campo" id="campoNome" style="display:none"><span>Nome completo</span>
+          <input id="lgNome" type="text" autocomplete="name" placeholder="Como aparece nos relatórios"></label>
+        <label class="campo"><span>Celular com DDD</span>
+          <input id="lgFone" type="tel" inputmode="numeric" autocomplete="username" placeholder="(11) 98765-4321"></label>
+        <label class="campo"><span>Senha</span>
+          <input id="lgSenha" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres"></label>
+        <button class="btn gr" id="btnLogin" onclick="enviarLogin()">Entrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app" style="display:none">
+  <header class="topo">
+    <div class="topo-in">
+      <div class="marca">
+        <b>Almoxarifado</b>
+        <span id="nomeEmpresa">Estoque central</span>
+      </div>
+      <div class="topo-dir">
+        <div class="usuario">
+          <span id="quemSou"></span>
+          <button onclick="sair()">Sair</button>
+        </div>
+      </div>
+    </div>
+    <div class="fita"></div>
+  </header>
+
+  <nav class="abas" aria-label="Seções"><div class="abas-in" id="abas"></div></nav>
+
+  <main id="tela"><div class="carregando">Carregando estoque…</div></main>
+</div>
+
+<div id="areaImpressao"></div>
+<div id="avisos"></div>
+<div id="modais"></div>
+
+<script src="assets/config.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
